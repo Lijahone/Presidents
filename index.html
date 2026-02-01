@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Presidents Online (v3)</title>
+<style>
+  :root{--bg:#071023;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);--txt:#eef2ff;--mut:#b7c0ffcc;--acc:#7aa2ff;--ok:#53d18a;--bad:#ff6b6b;--cardW:76px;--cardH:108px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--txt);
+    background:radial-gradient(900px 600px at 20% 0%, rgba(122,162,255,.18), transparent 55%),
+               radial-gradient(800px 600px at 90% 30%, rgba(83,209,138,.12), transparent 55%), var(--bg)}
+  .wrap{max-width:960px;margin:0 auto;padding:14px}
+  .bar{position:sticky;top:10px;z-index:10;display:flex;gap:10px;align-items:center;justify-content:space-between;
+    padding:10px 12px;border:1px solid var(--stroke);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));backdrop-filter:blur(10px)}
+  .title{font-weight:950}
+  .sub{font-size:12px;color:var(--mut)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  button{border:1px solid var(--stroke);background:rgba(122,162,255,.12);color:var(--txt);padding:10px 12px;border-radius:14px;font-weight:900;cursor:pointer;min-height:44px}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.secondary{background:rgba(255,255,255,.06)}
+  button.ok{background:rgba(83,209,138,.16);border-color:rgba(83,209,138,.35)}
+  button.bad{background:rgba(255,107,107,.16);border-color:rgba(255,107,107,.35)}
+  .pill{border:1px solid var(--stroke);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--mut);background:rgba(0,0,0,.2)}
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:12px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));padding:14px}
+  h2{margin:0 0 8px;font-size:14px;color:#dbe2ff}
+  label{font-size:12px;color:var(--mut)}
+  input,select{width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.22);color:var(--txt);min-height:44px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sep{height:1px;background:rgba(255,255,255,.10);margin:10px 0}
+  .screen{display:none}
+  .screen.on{display:block}
+  .help{border:1px dashed rgba(255,255,255,.18);background:rgba(0,0,0,.18);border-radius:16px;padding:12px;font-size:13px;line-height:1.35}
+  .players{display:flex;flex-direction:column;gap:8px}
+  .pline{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18)}
+  .pline.turn{outline:2px solid rgba(122,162,255,.55)}
+  .pline.out{opacity:.6}
+  .hand{display:flex;gap:10px;flex-wrap:wrap;padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);min-height:calc(var(--cardH) + 20px)}
+  .c{width:var(--cardW);height:var(--cardH);border-radius:16px;border:2px solid rgba(255,255,255,.14);
+     background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));display:flex;flex-direction:column;align-items:center;justify-content:center;
+     font-weight:1000;user-select:none;cursor:pointer}
+  .c .r{font-size:30px;line-height:1}
+  .c .s{font-size:22px;opacity:.9}
+  .c.red{color:#ff9aa0}
+  .c.sel{outline:3px solid rgba(122,162,255,.75);background:rgba(122,162,255,.18)}
+  .c.dim{opacity:.45;cursor:not-allowed}
+  .hint{font-size:13px;color:var(--mut);line-height:1.35}
+
+  /* v2 UX tweaks */
+  .actions .btn, button.btn, button{font-size:18px; padding:14px 16px; min-height:54px}
+  .actions{gap:12px}
+  .tabs button{font-size:16px; padding:12px 14px; min-height:46px}
+  :root{--cardW:92px;--cardH:132px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div>
+      <div class="title">Presidents Online (v3)</div>
+      <div class="sub">One player per device • Rooms • Big cards</div>
+    </div>
+    <div class="tabs">
+      <span class="pill" id="status">Offline</span>
+      <button class="secondary" id="tHome">Home</button>
+      <button class="secondary" id="tRules">Rules</button>
+      <button class="secondary" id="tRoom" disabled>Room</button>
+      <button class="secondary" id="tGame" disabled>Game</button>
+    </div>
+  </div>
+
+  <section class="screen on" id="home">
+    <div class="grid">
+      <div class="card">
+        <h2>Quick start</h2>
+        <div class="help">
+          • Tap <b>Create</b> (host) or <b>Join</b><br/>
+          • Everyone taps <b>Ready</b><br/>
+          • Host taps <b>Start</b><br/><br/>
+          If iPhone shows an old version, open your link with <b>?v=2</b> on the end.
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <button class="ok" id="btnCreate">Create</button>
+          <button id="btnJoin">Join</button>
+          <button class="secondary" id="btnLeave" disabled>Leave room</button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div id="createBox" style="display:none">
+          <div class="row">
+            <div style="flex:1;min-width:200px">
+              <label>Host name</label>
+              <input id="createName" maxlength="18" placeholder="Host"/>
+            </div>
+            <div style="width:160px">
+              <label>Players</label>
+              <select id="createPlayers">
+                <option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="ok" id="btnCreateGo">Create room</button>
+            <button class="secondary" id="btnCreateCancel">Cancel</button>
+          </div>
+        </div>
+
+        <div id="joinBox" style="display:none">
+          <div class="row">
+            <div style="width:160px">
+              <label>Room code</label>
+              <input id="joinCode" maxlength="8" placeholder="K7Q9"/>
+            </div>
+            <div style="flex:1;min-width:200px">
+              <label>Your name</label>
+              <input id="joinName" maxlength="18" placeholder="Player"/>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="ok" id="btnJoinGo">Join room</button>
+            <button class="secondary" id="btnJoinCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Connection</h2>
+        <div class="help">
+          <div>UID: <b id="uid">—</b></div>
+          <div>Room: <b id="roomCode">—</b></div>
+        </div>
+        <div class="sep"></div>
+        <div class="hint">If rooms don’t work, it’s usually Firestore rules blocking reads/writes.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="rules">
+    <div class="grid">
+      <div class="card">
+        <h2>Room rules (host can save)</h2>
+        <div class="row">
+          <div style="flex:1;min-width:210px">
+            <label>Preset</label>
+            <select id="preset">
+              <option value="classic">Classic</option>
+              <option value="fast">Fast</option>
+              <option value="noswaps">No swaps</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:210px">
+            <label>Starting rule</label>
+            <select id="startRule">
+              <option value="lowest" selected>Lowest starts</option>
+              <option value="host">Host starts</option>
+            </select>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <label style="flex:1"><input type="checkbox" id="two" checked/ checked disabled> Joker clears pile</label>
+          <label style="flex:1"><input type="checkbox" id="four"/> 4-of-a-kind clears</label>
+        </div>
+        <div class="row">
+          <label style="flex:1"><input type="checkbox" id="match" checked/> Must match set size</label>
+          <label style="flex:1"><input type="checkbox" id="swaps" checked/> Swaps between rounds</label>
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <button class="ok" id="saveRules" disabled>Save to room</button>
+          <button class="secondary" id="backHome">Back</button>
+        </div>
+        <p class="hint">Ranking: 3 low → … → A → 2 high (suits ignored).</p>
+      </div>
+      <div class="card">
+        <h2>Current room rules</h2>
+        <div class="help" id="rulesView">Not in a room yet.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="room">
+    <div class="grid">
+      <div class="card">
+        <h2>Lobby</h2>
+        <div class="help" id="lobbyInfo">Join a room.</div>
+        <div class="sep"></div>
+        <div>
+          <label>Your name</label>
+          <input id="myName" maxlength="18"/>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="ok" id="btnName" disabled>Update name</button>
+          <button id="btnReady" disabled>Ready</button>
+          <button class="secondary" id="btnRules">Rules</button>
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <button class="ok" id="btnStart" disabled>Start game</button>
+          <button class="secondary" id="btnReset" disabled>Reset room</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Players</h2>
+        <div class="players" id="plist"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="game">
+    <div class="grid">
+      <div class="card">
+        <h2>Table</h2>
+        <div class="help">
+          Turn: <b id="turn">—</b><br/>
+          Pile: <b id="pile">Empty</b><br/>
+          Need: <b id="need">—</b>
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <button class="ok" id="play" disabled>Play</button>
+          <button id="pass" disabled>Pass</button>
+          <button class="secondary" id="clear" disabled>Clear</button>
+          <button class="secondary" id="toRoom">Room</button>
+        </div>
+        <p class="hint" id="turnHint">—</p>
+        <div class="sep"></div>
+        <h2>Your hand</h2>
+        <div class="hand" id="hand"></div>
+        <p class="hint" id="selHint"></p>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="players" id="pgame"></div>
+        <div class="sep"></div>
+        <div class="row">
+          <button class="ok" id="nextRound" disabled>Next round</button>
+          <button class="bad" id="endGame" disabled>End game</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, serverTimestamp,
+  onSnapshot, query, orderBy, deleteDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDZ1a1vqF1TEyuyh2AqaIPPgCOXqjqOwu4",
+    authDomain: "presidents-e0545.firebaseapp.com",
+    projectId: "presidents-e0545",
+    storageBucket: "presidents-e0545.firebasestorage.app",
+    messagingSenderId: "1008468760177",
+    appId: "1:1008468760177:web:22ae78a67e24b76c496dd0",
+    measurementId: "G-JS3WZ950LE"
+  };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = (id)=>document.getElementById(id);
+const screens={home:$("home"),rules:$("rules"),room:$("room"),game:$("game")};
+const show=(name)=>{Object.values(screens).forEach(s=>s.classList.remove("on")); screens[name].classList.add("on");
+  $("tRoom").disabled=!state.roomId; $("tGame").disabled=!(state.roomId && state.room && state.room.phase==="in_game");};
+
+const BASE_SUITS=["C","D","H","S"];
+const SUITS=["C","D","H","S","J"];
+const SUIT_SYMBOL={C:"♣",D:"♦",H:"♥",S:"♠",J:"🃏"};
+const SUIT_RED={D:true,H:true,J:false};
+const rankLabel=(r)=>r<=10?String(r):({11:"J",12:"Q",13:"K",14:"A",15:"2",16:"🃏"}[r]||"?");
+const cardKey=(c)=>`${c.rank}_${c.suit}`;
+const sortHand=(h)=>h.sort((a,b)=>(a.rank-b.rank)||(SUITS.indexOf(a.suit)-SUITS.indexOf(b.suit)));
+function makeDeck(){const d=[];
+  for(let r=3;r<=15;r++) for(const s of BASE_SUITS) d.push({rank:r,suit:s});
+  // Add 2 jokers
+  d.push({rank:16,suit:"J"},{rank:16,suit:"J"});
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]];}
+  return d;
+}
+function deal(deck,uids){const hands={}; for(const u of uids) hands[u]=[]; let i=0;
+  while(deck.length){hands[uids[i%uids.length]].push(deck.pop()); i++;} for(const u of uids) sortHand(hands[u]); return hands;}
+function findLowest(hands){let best=null; for(const [uid,hand] of Object.entries(hands)){for(const c of hand){
+  const si=SUITS.indexOf(c.suit); if(!best||c.rank<best.r||(c.rank===best.r&&si<best.si)) best={uid,r:c.rank,si};}} return best?best.uid:null;}
+
+const state={user:null,roomId:null,room:null,players:new Map(),me:null,unsubR:null,unsubP:null,sel:new Set()};
+
+const roomRef=(id)=>doc(db,"rooms",id);
+const playerRef=(rid,uid)=>doc(db,"rooms",rid,"players",uid);
+const playersCol=(rid)=>collection(db,"rooms",rid,"players");
+
+const defaultRules=()=>({preset:"classic",twoClears:false,fourClears:false,matchSize:true,swaps:true,startRule:"lowest"});
+const rulesFromUI=()=>({preset:$("preset").value,twoClears:false,fourClears:$("four").checked,matchSize:$("match").checked,swaps:$("swaps").checked,startRule:$("startRule").value});
+const rulesToUI=(r)=>{r=r||defaultRules(); $("preset").value=r.preset||"classic"; $("two").checked=true; $("two").disabled=true; $("four").checked=!!r.fourClears; $("match").checked=!!r.matchSize; $("swaps").checked=!!r.swaps; $("startRule").value=r.startRule||"lowest";};
+const rulesSummary=(r)=>{r=r||defaultRules(); const b=[r.startRule==="lowest"?"Lowest starts":"Host starts"]; if(r.twoClears)b.push("Joker clears"); if(r.fourClears)b.push("4 clears"); if(r.matchSize)b.push("Match"); if(r.swaps)b.push("Swaps"); return b.join(" • ");};
+
+function setStatus(txt){$("status").textContent=txt;}
+function uidShort(uid){return uid?uid.slice(0,6)+"…"+uid.slice(-4):"—";}
+
+async function ensureAuth(){ if(state.user) return; await signInAnonymously(auth); }
+
+onAuthStateChanged(auth,(u)=>{state.user=u; $("uid").textContent=u?uidShort(u.uid):"—"; setStatus(u?"Connected":"Offline");});
+
+$("tHome").onclick=()=>show("home");
+$("tRules").onclick=()=>show("rules");
+$("tRoom").onclick=()=>show("room");
+$("tGame").onclick=()=>show("game");
+$("btnRules").onclick=()=>show("rules");
+$("backHome").onclick=()=>show("home");
+$("toRoom").onclick=()=>show("room");
+
+$("btnCreate").onclick=()=>{$("createBox").style.display="block"; $("joinBox").style.display="none";};
+$("btnJoin").onclick=()=>{$("joinBox").style.display="block"; $("createBox").style.display="none";};
+$("btnCreateCancel").onclick=()=>{$("createBox").style.display="none";};
+$("btnJoinCancel").onclick=()=>{$("joinBox").style.display="none";};
+
+$("btnLeave").onclick=async()=>{await leaveRoom();};
+
+function makeCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let o=""; for(let i=0;i<4;i++) o+=c[Math.floor(Math.random()*c.length)]; return o;}
+
+$("btnCreateGo").onclick=async()=>{
+  await ensureAuth();
+  const name=($("createName").value||"Host").trim().slice(0,18);
+  const maxPlayers=parseInt($("createPlayers").value,10);
+  let code=makeCode(); for(let t=0;t<6;t++){const s=await getDoc(roomRef(code)); if(!s.exists()) break; code=makeCode();}
+  await setDoc(roomRef(code),{createdAt:serverTimestamp(),updatedAt:serverTimestamp(),hostUid:state.user.uid,phase:"lobby",maxPlayers,
+    rules:defaultRules(),roundNumber:1,turnUid:null,pile:null,requiredCount:null,lastNonPassUid:null,passes:[],finishedUids:[],message:"Waiting for players…"});
+  await setDoc(playerRef(code,state.user.uid),{uid:state.user.uid,name,isHost:true,joinedAt:serverTimestamp(),ready:false,out:false,finishIndex:null,hand:[]});
+  await joinRoom(code,name);
+  $("createBox").style.display="none";
+  show("room");
+};
+
+$("btnJoinGo").onclick=async()=>{
+  await ensureAuth();
+  const code=($("joinCode").value||"").trim().toUpperCase();
+  const name=($("joinName").value||"Player").trim().slice(0,18);
+  if(!code) return alert("Enter room code");
+  const s=await getDoc(roomRef(code));
+  if(!s.exists()) return alert("Room not found");
+  await joinRoom(code,name);
+  $("joinBox").style.display="none";
+  show("room");
+};
+
+async function joinRoom(rid,name){
+  if(state.roomId && state.roomId!==rid) await leaveRoom();
+  state.roomId=rid;
+  $("roomCode").textContent=rid;
+  $("btnLeave").disabled=false;
+  $("tRoom").disabled=false;
+
+  const pRef=playerRef(rid,state.user.uid);
+  const pSnap=await getDoc(pRef);
+  if(!pSnap.exists()) await setDoc(pRef,{uid:state.user.uid,name,isHost:false,joinedAt:serverTimestamp(),ready:false,out:false,finishIndex:null,hand:[]});
+  else await updateDoc(pRef,{name});
+
+  if(state.unsubR) state.unsubR();
+  state.unsubR=onSnapshot(roomRef(rid),(snap)=>{ if(!snap.exists()){leaveRoom(); return;} state.room=snap.data(); render(); });
+
+  if(state.unsubP) state.unsubP();
+  state.unsubP=onSnapshot(query(playersCol(rid),orderBy("joinedAt","asc")),(qs)=>{
+    state.players.clear(); qs.forEach(d=>state.players.set(d.id,d.data()));
+    state.me=state.players.get(state.user.uid)||null; render();
+  });
+
+  $("myName").value=name; $("btnName").disabled=false; $("btnReady").disabled=false;
+}
+
+async function leaveRoom(){
+  if(!state.roomId) return;
+  const rid=state.roomId;
+  try{await deleteDoc(playerRef(rid,state.user.uid));}catch{}
+  if(state.unsubR) state.unsubR();
+  if(state.unsubP) state.unsubP();
+  state.unsubR=null; state.unsubP=null;
+  state.roomId=null; state.room=null; state.players.clear(); state.me=null; state.sel.clear();
+  $("roomCode").textContent="—"; $("btnLeave").disabled=true;
+  $("tRoom").disabled=true; $("tGame").disabled=true;
+  $("plist").innerHTML=""; $("pgame").innerHTML=""; $("hand").innerHTML="";
+  show("home");
+}
+
+$("btnName").onclick=async()=>{
+  if(!state.roomId) return;
+  const name=($("myName").value||"Player").trim().slice(0,18);
+  await updateDoc(playerRef(state.roomId,state.user.uid),{name});
+};
+
+$("btnReady").onclick=async()=>{
+  if(!state.roomId||!state.me) return;
+  await updateDoc(playerRef(state.roomId,state.user.uid),{ready:!state.me.ready});
+};
+
+$("saveRules").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.hostUid!==state.user.uid) return alert("Host only");
+  await updateDoc(roomRef(state.roomId),{rules:rulesFromUI(),updatedAt:serverTimestamp()});
+};
+
+$("preset").onchange=()=>{
+  const p=$("preset").value;
+  if(p==="classic"){ $("two").checked=true; $("four").checked=false; $("match").checked=true; $("swaps").checked=true; $("startRule").value="lowest"; }
+  if(p==="fast"){ $("two").checked=true; $("four").checked=true; $("match").checked=true; $("swaps").checked=true; $("startRule").value="lowest"; }
+  if(p==="noswaps"){ $("two").checked=true; $("four").checked=false; $("match").checked=true; $("swaps").checked=false; $("startRule").value="lowest"; }
+};
+
+$("btnReset").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.hostUid!==state.user.uid) return alert("Host only");
+  if(!confirm("Reset room?")) return;
+  await updateDoc(roomRef(state.roomId),{phase:"lobby",roundNumber:1,turnUid:null,pile:null,requiredCount:null,lastNonPassUid:null,passes:[],finishedUids:[],message:"Waiting for players…",updatedAt:serverTimestamp()});
+  const batch=writeBatch(db);
+  for(const [uid] of state.players.entries()) batch.update(playerRef(state.roomId,uid),{ready:false,out:false,finishIndex:null,hand:[]});
+  await batch.commit();
+};
+
+$("btnStart").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.hostUid!==state.user.uid) return alert("Host only");
+  const uids=[...state.players.keys()];
+  if(uids.length<3) return alert("Need 3+ players");
+  if(!uids.every(u=>state.players.get(u)?.ready)) return alert("Everyone must be Ready");
+  const hands=deal(makeDeck(),uids);
+  const rules=state.room.rules||defaultRules();
+  const start=(rules.startRule==="host")?state.user.uid:(findLowest(hands)||state.user.uid);
+  const batch=writeBatch(db);
+  for(const uid of uids) batch.update(playerRef(state.roomId,uid),{hand:hands[uid],out:false,finishIndex:null});
+  batch.update(roomRef(state.roomId),{phase:"in_game",roundNumber:1,turnUid:start,pile:null,requiredCount:null,lastNonPassUid:null,passes:[],finishedUids:[],message:"Game started!",updatedAt:serverTimestamp()});
+  await batch.commit();
+  show("game");
+};
+
+function selection(hand){const set=new Set(state.sel); return hand.filter(c=>set.has(cardKey(c)));}
+
+function isJoker(c){return c.rank===16;}
+function playMeta(sel){
+  const non = sel.filter(c=>!isJoker(c));
+  const jok = sel.filter(isJoker);
+  const n = sel.length;
+  if(non.length===0) return {ok:true, rank:16, count:n, kind:"joker", baseRank:16, jokers:n};
+  const r = non[0].rank;
+  if(non.some(c=>c.rank!==r)) return {ok:false, why:"Same rank only (jokers can fill)"};
+  return {ok:true, rank:r, count:n, kind:"mixed", baseRank:r, jokers:jok.length};
+}
+function beats(topRank, myRank){
+  // Joker beats everything including 2
+  if(myRank===16) return topRank!==16; // cannot beat another joker (keeps game moving)
+  return myRank>topRank;
+}
+
+
+function validate(room,rules,hand,sel){
+  if(!sel.length) return {ok:false,why:"Pick cards"};
+  // Cannot play if you already passed this trick (until pile clears)
+  if(room.pile && (room.passes||[]).includes(state.user.uid)) return {ok:false,why:"You passed — wait for the clear"};
+  const meta=playMeta(sel);
+  if(!meta.ok) return {ok:false,why:meta.why};
+  const r=meta.rank, n=meta.count;
+  if(room.requiredCount!==null && rules.matchSize && n!==room.requiredCount) return {ok:false,why:`Must play ${room.requiredCount}`};
+  if(room.pile){
+    const top=room.pile.rank;    const isFour=rules.fourClears && n===4; // 4 cards clears (with jokers allowed)
+        // Joker is unbeatable when played as pure joker set (rank 16); it will clear immediately after play.
+    if(!isFour){
+      if(!beats(top, r)) return {ok:false,why:`Must beat ${rankLabel(top)}`};
+    }
+  }
+  return {ok:true,why:"OK"};
+}
+
+
+function nextTurn(room,fromUid){
+  const uids=[...state.players.keys()];
+  const passes=new Set(room.passes||[]);
+  let start=Math.max(0,uids.indexOf(fromUid));
+  for(let step=1;step<=uids.length;step++){
+    const uid=uids[(start+step)%uids.length];
+    const p=state.players.get(uid);
+    if(!p || p.out) continue;
+    if(room.pile && passes.has(uid)) continue; // passed players sit out until clear
+    return uid;
+  }
+  return fromUid;
+}
+
+function countNotPassed(room){
+  const passes=new Set(room.passes||[]); let c=0;
+  for(const [uid,p] of state.players.entries()) if(p && !p.out && !passes.has(uid)) c++;
+  return c;
+}
+
+$("clear").onclick=()=>{state.sel.clear(); renderHand();};
+
+
+$("play").onclick=async()=>{
+  if(!state.roomId||!state.room||!state.me) return;
+  if(state.room.turnUid!==state.user.uid) return alert("Not your turn");
+  if(state.room.pile && (state.room.passes||[]).includes(state.user.uid)) return alert("You passed — wait for the clear");
+  const room=state.room, rules=room.rules||defaultRules();
+  const hand=state.me.hand||[];
+  const sel=selection(hand);
+  const v=validate(room,rules,hand,sel);
+  if(!v.ok) return alert(v.why);
+
+  await runTransaction(db, async(tx)=>{
+    const rRef=roomRef(state.roomId), pRef=playerRef(state.roomId,state.user.uid);
+    const rSnap=await tx.get(rRef), pSnap=await tx.get(pRef);
+    const rr=rSnap.data(), me=pSnap.data();
+    if(rr.turnUid!==state.user.uid) throw new Error("Turn changed");
+    if(rr.pile && (rr.passes||[]).includes(state.user.uid)) throw new Error("You passed — wait for the clear");
+
+    const rules=rr.rules||defaultRules();
+    const hand=me.hand||[];
+    const sel=selection(hand);
+    const v=validate(rr,rules,hand,sel);
+    if(!v.ok) throw new Error(v.why);
+
+    const meta=playMeta(sel);
+    if(!meta.ok) throw new Error(meta.why);
+    const selSet=new Set(sel.map(cardKey));
+    const newHand=hand.filter(c=>!selSet.has(cardKey(c)));
+
+    const rank=meta.rank, count=meta.count;
+
+    let out=!!me.out, finishIndex=me.finishIndex??null;
+    let finished=rr.finishedUids||[];
+    if(newHand.length===0 && !out){out=true; finishIndex=finished.length; finished=[...finished,state.user.uid];}
+    const isFour=rules.fourClears && count===4; // 4-card play clears (jokers allowed)
+
+    const pile={rank,count,byUid:state.user.uid};
+    let next = (isJokerClear || isFour) ? state.user.uid : nextTurn(rr,state.user.uid);
+
+    // Keep passes during an active trick (passed players can't re-enter until clear)
+    const keepPasses = rr.pile ? (rr.passes||[]) : [];
+    let upd={updatedAt:serverTimestamp(), finishedUids:finished, turnUid:next, passes:keepPasses, lastNonPassUid:state.user.uid};
+
+    if(isJokerClear || isFour){
+      upd.pile=null; upd.requiredCount=null; upd.passes=[]; upd.lastNonPassUid=null;
+    }else{
+      upd.pile=pile; upd.requiredCount=rules.matchSize?count:null;
+    }
+
+    tx.update(pRef,{hand:newHand,out,finishIndex});
+
+    // round end?
+    const map=new Map(state.players);
+    map.set(state.user.uid,{...(map.get(state.user.uid)||{}),out});
+    let active=0,last=null;
+    for(const [uid,p] of map.entries()) if(p && !p.out){active++; last=uid;}
+    if(active<=1){
+      if(active===1 && last){
+        const lastRef=playerRef(state.roomId,last);
+        const lastSnap=await tx.get(lastRef);
+        const lp=lastSnap.data();
+        if(!lp.out){
+          const fi=(upd.finishedUids||[]).length;
+          tx.update(lastRef,{out:true,finishIndex:fi});
+          upd.finishedUids=[...(upd.finishedUids||[]), last];
+        }
+      }
+      upd.phase="between_rounds"; upd.turnUid=null; upd.pile=null; upd.requiredCount=null; upd.passes=[]; upd.lastNonPassUid=null;
+    }
+    tx.update(rRef,upd);
+  });
+
+  state.sel.clear();
+};
+
+
+$("pass").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.turnUid!==state.user.uid) return alert("Not your turn");
+  await runTransaction(db, async(tx)=>{
+    const rRef=roomRef(state.roomId);
+    const rSnap=await tx.get(rRef);
+    const rr=rSnap.data();
+    if(rr.turnUid!==state.user.uid) throw new Error("Turn changed");
+    const passes=new Set(rr.passes||[]); passes.add(state.user.uid);
+    let upd={updatedAt:serverTimestamp(), passes:[...passes]};
+    if(rr.pile && countNotPassed({...rr,passes:[...passes]})<=1){
+      const winner=rr.lastNonPassUid||state.user.uid;
+      upd.pile=null; upd.requiredCount=null; upd.passes=[]; upd.lastNonPassUid=null; upd.turnUid=winner;
+    }else{
+      upd.turnUid=nextTurn(rr,state.user.uid);
+    }
+    tx.update(rRef,upd);
+  });
+  state.sel.clear();
+};
+
+$("nextRound").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.hostUid!==state.user.uid) return alert("Host only");
+  if(state.room.phase!=="between_rounds") return;
+  const finished=state.room.finishedUids||[];
+  const uids=[...state.players.keys()];
+  let hands=deal(makeDeck(),uids);
+  const rules=state.room.rules||defaultRules();
+  if(rules.swaps && uids.length>=4 && finished.length>=4){
+    const pres=finished[0], scum=finished[finished.length-1], vp=finished[1], vsc=finished[finished.length-2];
+    const giveLow=(uid,n)=>{const h=[...hands[uid]]; sortHand(h); return h.slice(0,n);};
+    const giveHigh=(uid,n)=>{const h=[...hands[uid]]; sortHand(h); return h.slice(Math.max(0,h.length-n));};
+    const rem=(uid,cards)=>{const s=new Set(cards.map(cardKey)); hands[uid]=hands[uid].filter(c=>!s.has(cardKey(c)));};
+    const add=(uid,cards)=>{hands[uid].push(...cards); sortHand(hands[uid]);};
+    const presGive=giveLow(pres,2), scumGive=giveHigh(scum,2);
+    rem(pres,presGive); rem(scum,scumGive); add(pres,scumGive); add(scum,presGive);
+    const vpGive=giveLow(vp,1), vscGive=giveHigh(vsc,1);
+    rem(vp,vpGive); rem(vsc,vscGive); add(vp,vscGive); add(vsc,vpGive);
+  }
+  const start=(rules.startRule==="host")?state.room.hostUid:(findLowest(hands)||finished[0]||state.room.hostUid);
+  const batch=writeBatch(db);
+  for(const uid of uids) batch.update(playerRef(state.roomId,uid),{hand:hands[uid],out:false,finishIndex:null,ready:true});
+  batch.update(roomRef(state.roomId),{phase:"in_game",roundNumber:(state.room.roundNumber||1)+1,turnUid:start,pile:null,requiredCount:null,lastNonPassUid:null,passes:[],finishedUids:[],updatedAt:serverTimestamp()});
+  await batch.commit();
+  show("game");
+};
+
+$("endGame").onclick=async()=>{
+  if(!state.roomId||!state.room) return;
+  if(state.room.hostUid!==state.user.uid) return alert("Host only");
+  if(!confirm("End game for everyone?")) return;
+  await updateDoc(roomRef(state.roomId),{phase:"ended",updatedAt:serverTimestamp()});
+  show("room");
+};
+
+function renderPlayers(){
+  const el=$("plist"), eg=$("pgame");
+  el.innerHTML=""; eg.innerHTML="";
+  const uids=[...state.players.keys()], n=uids.length;
+  for(const uid of uids){
+    const p=state.players.get(uid);
+    const isTurn=state.room && state.room.turnUid===uid && state.room.phase==="in_game";
+    const out=!!p.out;
+    const line=document.createElement("div");
+    line.className="pline"+(isTurn?" turn":"")+(out?" out":"");
+    line.innerHTML=`<div><b>${p.name||"Player"}${uid===state.user.uid?" (You)":""}</b><div class="sub">Cards: ${(p.hand||[]).length} • Ready: ${p.ready?"✅":"—"}</div></div><div>${out?"🏁":(isTurn?"▶️":"")}</div>`;
+    el.appendChild(line);
+
+    const gl=document.createElement("div");
+    gl.className="pline"+(isTurn?" turn":"")+(out?" out":"");
+    const finish = (p.finishIndex!==null && p.finishIndex!==undefined) ? computeFinishLabel(p.finishIndex,n) : "";
+    gl.innerHTML=`<div><b>${p.name||"Player"}${uid===state.user.uid?" (You)":""}</b><div class="sub">Cards: ${(p.hand||[]).length} ${finish?("• "+finish):""}</div></div><div>${out?"🏁":(isTurn?"▶️":"")}</div>`;
+    eg.appendChild(gl);
+  }
+}
+
+function computeFinishLabel(pos,n){
+  if(pos===0) return "President";
+  if(pos===1) return "Vice President";
+  if(pos===n-2) return "Vice Scum";
+  if(pos===n-1) return "Scum";
+  return `Middle (${pos+1})`;
+}
+
+function renderHand(){
+  const h=$("hand"); h.innerHTML="";
+  if(!state.room || state.room.phase!=="in_game"){h.innerHTML=`<div class="hint">Not in game.</div>`; $("selHint").textContent=""; return;}
+  if(!state.me){h.innerHTML=`<div class="hint">Joining…</div>`; return;}
+  const hand=[...(state.me.hand||[])]; sortHand(hand);
+  const myTurn=state.room.turnUid===state.user.uid;
+  for(const c of hand){
+    const k=cardKey(c);
+    const d=document.createElement("div");
+    d.className="c"+(SUIT_RED[c.suit]?" red":"")+(state.sel.has(k)?" sel":"")+(myTurn?"":" dim");
+    d.innerHTML = isJoker(c) ? `<div class="r">🃏</div><div class="s">🃏</div>` : `<div class="r">${rankLabel(c.rank)}</div><div class="s">${SUIT_SYMBOL[c.suit]}</div>`;
+    d.onclick=async()=>{ if(!myTurn) return;
+      state.sel.has(k)?state.sel.delete(k):state.sel.add(k);
+      renderHand();
+      // Auto-play when responding to a set (pair/triple/quad) and selection completes the required count
+      const room=state.room, rules=room.rules||defaultRules();
+      if(room && room.pile && rules.matchSize && room.requiredCount!==null){
+        const handNow=[...(state.me.hand||[])]; sortHand(handNow);
+        const selNow=selection(handNow);
+        if(selNow.length===room.requiredCount){
+          const v=validate(room,rules,handNow,selNow);
+          if(v.ok){
+            // trigger play
+            $("play").click();
+          }
+        }
+      }
+    };
+    h.appendChild(d);
+  }
+  const sel=selection(hand);
+  const rules=state.room.rules||defaultRules();
+  const v=sel.length?validate(state.room,rules,hand,sel):{ok:true,why:""};
+  $("selHint").textContent = sel.length ? (v.ok?`Selected: ${rankLabel(sel[0].rank)} × ${sel.length}`:`⚠ ${v.why}`) : "Tap cards to select.";
+  $("clear").disabled = !sel.length || !myTurn;
+  $("play").disabled = !(myTurn && sel.length && v.ok);
+  $("pass").disabled = !myTurn;
+}
+
+function render(){
+  $("tRoom").disabled=!state.roomId;
+  $("tGame").disabled=!(state.roomId && state.room && state.room.phase==="in_game");
+  const isHost=!!(state.room && state.room.hostUid===state.user.uid);
+  $("saveRules").disabled = !(state.roomId && isHost && state.room && state.room.phase==="lobby");
+  $("btnStart").disabled = !(state.roomId && isHost && state.room && state.room.phase==="lobby");
+  $("btnReset").disabled = !(state.roomId && isHost);
+  $("nextRound").disabled = !(state.roomId && isHost && state.room && state.room.phase==="between_rounds");
+  $("endGame").disabled = !(state.roomId && isHost && state.room && state.room.phase!=="lobby");
+
+  if(state.room){
+    $("rulesView").textContent = rulesSummary(state.room.rules||defaultRules());
+    rulesToUI(state.room.rules||defaultRules());
+    const ready=[...state.players.values()].filter(p=>p.ready).length;
+    $("lobbyInfo").innerHTML = `Code: <b>${state.roomId}</b><br/>Ready: <b>${ready}/${state.players.size}</b><br/>Max: <b>${state.room.maxPlayers}</b>`;
+    $("btnReady").textContent = state.me?.ready ? "Unready" : "Ready";
+  } else {
+    $("rulesView").textContent="Not in a room yet.";
+    $("lobbyInfo").textContent="Join a room.";
+  }
+
+  if(state.room && state.room.phase==="in_game"){
+    const tuid=state.room.turnUid;
+    $("turn").textContent = tuid ? (state.players.get(tuid)?.name||"—") : "—";
+    $("pile").textContent = state.room.pile ? `${rankLabel(state.room.pile.rank)} × ${state.room.pile.count}` : "Empty";
+    $("need").textContent = state.room.requiredCount===null ? "—" : String(state.room.requiredCount);
+    const myTurn = tuid===state.user.uid;
+    $("turnHint").textContent = myTurn ? "Your turn: select cards then Play (or Pass)." : "Wait for your turn…";
+  } else if(state.room && state.room.phase==="between_rounds"){
+    $("turnHint").textContent="Round complete. Host can start next round.";
+  } else {
+    $("turnHint").textContent="—";
+  }
+
+  renderPlayers();
+  renderHand();
+}
+
+await ensureAuth();
+show("home");
+</script>
+</body>
+</html>
